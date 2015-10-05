@@ -93,7 +93,7 @@ func TestHandleRoot_Recorder(t *testing.T) {
         }
 }
 
-func req(t *testing.T, v string) *http.Request {
+func req(t testing.TB, v string) *http.Request {
         req, err := http.ReadRequest(bufio.NewReader(strings.NewReader(v)))
         if err != nil {
                 t.Fatal(err)
@@ -129,9 +129,9 @@ func TestHandleHi_TestServer(t *testing.T) {
                 t.Error(err)
                 return
         }
-	if g, w := res.Header.Get("Content-Type"), "text/html; charset=utf-8"; g != w {
-		t.Errorf("Content-Type = %q; want %q", g, w)
-	}
+	    if g, w := res.Header.Get("Content-Type"), "text/html; charset=utf-8"; g != w {
+		        t.Errorf("Content-Type = %q; want %q", g, w)
+	    }
         slurp, err := ioutil.ReadAll(res.Body)
         defer res.Body.Close()
         if err != nil {
@@ -182,8 +182,7 @@ func TestHandleHi_TestServer_Parallel(t *testing.T) {
 			defer wg.Done()
 			res, err := http.Get(ts.URL)
 			if err != nil {
-				t.Error(err)
-				return
+				t.Fatal(err)
 			}
 			if g, w := res.Header.Get("Content-Type"), "text/html; charset=utf-8"; g != w {
 				t.Errorf("Content-Type = %q; want %q", g, w)
@@ -191,8 +190,7 @@ func TestHandleHi_TestServer_Parallel(t *testing.T) {
 			slurp, err := ioutil.ReadAll(res.Body)
 			defer res.Body.Close()
 			if err != nil {
-				t.Error(err)
-				return
+				t.Fatal(err)
 			}
 			t.Logf("Got: %s", slurp)
 		}()
@@ -339,7 +337,7 @@ But let's see where the CPU is going now....
 ## CPU Profiling
 
 ```
-$ go test -v -run=^$ -bench=^BenchmarkHi$ -benchtime=2s -cpuprofile=prof.cpu
+$ go test -v -run=^$ -bench=^BenchmarkHi$ -benchtime=2s -cpuprofile=prof.cpu -memprofile=prof.mem
 ```
 
 (Leaves `demo.test` binary behind)
@@ -420,7 +418,7 @@ Why are we allocating?
 ## Memory profiling
 
 ```
-$ go tool pprof --alloc_space demo.test prof.mem
+$ go tool pprof -alloc_space demo.test prof.mem
 (pprof) top
 1159.72MB of 1485.25MB total (78.08%)
 Dropped 12 nodes (cum <= 7.43MB)
@@ -494,7 +492,7 @@ ROUTINE ======================== yapc/demo.handleHi in /Users/bradfitz/src/yapc/
 ## Let's compile that regexp just once
 
 ```go
-var colorRx = regexp.MustCompile(`\w*$`)
+var colorRx = regexp.MustCompile(`^\w*$`)
 ...
   if !colorRx.MatchString(r.FormValue("color")) {
 ```
@@ -517,7 +515,7 @@ bradfitz@laptop demo$ go test -v -run=^$ -bench=. -benchtime=3s -memprofile=prof
 PASS
 BenchmarkHi-4    3000000              1420 ns/op
 ok      yapc/demo       5.768s
-bradfitz@laptop demo$ profcpu
+bradfitz@laptop demo$ go tool pprof demo.test prof.cpu
 Entering interactive mode (type "help" for commands)
 (pprof) top --cum 30
 2.78s of 6.24s total (44.55%)
@@ -555,7 +553,9 @@ Showing top 30 nodes out of 114 (cum >= 0.67s)
          0     0% 44.55%      0.67s 10.74%  runtime.findrunnable
          0     0% 44.55%      0.67s 10.74%  runtime.goschedImpl
 
-(pprof) bradfitz@laptop demo$ profmem
+(pprof) 
+
+bradfitz@laptop demo$ go tool pprof -alloc_space demo.test prof.mem
 Entering interactive mode (type "help" for commands)
 (pprof) top --cum
 2739.53MB of 2740.53MB total (  100%)
